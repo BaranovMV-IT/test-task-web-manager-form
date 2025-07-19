@@ -5,7 +5,10 @@
         <div class="form__header">
           <div class="form__header__title">
             Учетные записи
-            <button class="form__header__title__button">
+            <button 
+              @click="store.addNewRecord()"
+              class="form__header__title__button"
+            >
               &#10011;
             </button>
           </div>
@@ -24,12 +27,21 @@
               <div class="form__content__rows__labels__item  column_login">Логин</div>
               <div class="form__content__rows__labels__item  column_password">Пароль</div>
             </div>
-            <div class="form__content__rows__item">
-              <div class="form__content__rows__item__input  column_marks">
+            <div 
+              v-for="record in store.formRecords"
+              :key="record.id + record.login + record.password"
+              class="form__content__rows__item"
+            >
+              <div 
+                class="form__content__rows__item__input  column_marks"
+                :class="{input_incorrect: store.isFormInputIncorrect[record.id + '-' + 'marks']}"
+              >
                 <v-textarea 
+                  :model-value="store.transformMarksToString(record.marks)"
                   rows="1"
                   :hide-details="true"
                   auto-grow
+                  @blur="(e: any) => {store.changeInputValue('marks', record, e)}"
                   variant="solo"
                   density="compact"
                 >
@@ -37,33 +49,67 @@
               </div>
               <div class="form__content__rows__item__input  column_type">
                 <v-select 
+                  item-value="value"
+                  item-title="title"
+                  :model-value="record.type"
+                  :items="store.recordTypes"
                   :hide-details="true"
+                  @update:model-value="(e: any) => {store.changeInputValue('type', record, e)}"
+                  @update:menu="recordsIconMode[record.id + '-' + 'type'] = recordsIconMode[record.id + '-' + 'type'] ? false : true"
                   variant="solo"
                   density="compact"
                 >
                 </v-select>
-                <div class="form__content__rows__item__input__arrow  fa fa-angle-down"></div>
+                <div 
+                  class="form__content__rows__item__input__arrow"
+                  :class="{'fa': true, 'fa-angle-down': recordsIconMode[record.id + '-' + 'type'] != true, 'fa-angle-up': recordsIconMode[record.id + '-' + 'type'] == true}"
+                >
+                </div>
               </div>
-              <div class="form__content__rows__item__input  column_login">
+              <div 
+                class="form__content__rows__item__input  column_login"
+                :class="{input_incorrect: store.isFormInputIncorrect[record.id + '-' + 'login']}"
+              >
                 <v-text-field 
+                  :model-value="record.login"
                   :hide-details="true"
+                  @change="(e: any) => {store.changeInputValue('login', record, e)}"
+                  @blur="(e: any) => {store.changeInputValue('login', record, e)}"
                   variant="solo"
                   density="compact"
                 >
                 </v-text-field>
               </div>
-              <div class="form__content__rows__item__input  column_password">
+              <div 
+                v-if="record.type != 'ldap'"
+                class="form__content__rows__item__input  column_password"
+                :class="{input_incorrect: store.isFormInputIncorrect[record.id + '-' + 'password']}"
+              >
                 <v-text-field 
+                  :model-value="record.password"
+                  :type="recordsIconMode[record.id + '-' + 'password'] ? 'text' : 'password'"
                   :hide-details="true"
+                  @change="(e: any) => {store.changeInputValue('password', record, e)}"
+                  @blur="(e: any) => {store.changeInputValue('password', record, e)}"
                   variant="solo"
                   density="compact"
                 >
                 </v-text-field>
-                <button class="form__content__rows__item__input__eye__button">
-                  <div class="form__content__rows__item__input__eye  fa fa-eye-slash"></div>
+                <button 
+                  @click="recordsIconMode[record.id + '-' + 'password'] = recordsIconMode[record.id + '-' + 'password'] ? false : true"
+                  class="form__content__rows__item__input__eye__button"
+                >
+                  <div 
+                    class="form__content__rows__item__input__eye"
+                    :class="{'fa': true, 'fa-eye-slash': recordsIconMode[record.id + '-' + 'password'] != true, 'fa-eye': recordsIconMode[record.id + '-' + 'password'] == true}"
+                  >
+                  </div>
                 </button>
               </div>
-              <button class="form__content__rows__item__button">
+              <button 
+                @click="store.removeRecordById(record.id)"
+                class="form__content__rows__item__button"
+              >
                 <div class="form__content__rows__item__button__bin  fa fa-trash-o"></div>
               </button>
             </div>
@@ -75,7 +121,20 @@
 </template>
 
 <script setup lang="ts">
+import { reactive, onBeforeMount } from 'vue';
+import { formStore } from "@/stores/formStore";
 
+interface iconModeType {
+  [slug: string]: boolean;
+}
+
+const store = formStore();
+
+const recordsIconMode = reactive<iconModeType>({});
+
+onBeforeMount(async () => {
+  await store.readFormRecordsFromLocalStorage();
+});
 </script>
 
 <style lang="scss">
